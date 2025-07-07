@@ -1,11 +1,12 @@
+# Most of the parts of this code come from: https://github.com/annegnx/PnP-Flow/
+
 import torch
 from torch import nn
 
-class cnf(torch.nn.Module):
-    """Transform the model used by the FLOW_MATCHING class into a function with 
-    a signature adapted to odeint.
 
-    Coming from: https://github.com/annegnx/PnP-Flow/
+class cnf(torch.nn.Module):
+    """Transform the model used by the FlowMatching class into a function with 
+    a signature adapted to odeint.
     """
 
     def __init__(self, model):

@@ -1,7 +1,9 @@
 import torch
 from torch import nn
-from torch.utils.data import TensorDataset, DataLoader
+from torch.utils.data import TensorDataset, DataLoader, Subset
 from torch.distributions.multivariate_normal import MultivariateNormal
+import torchvision
+from torchvision import transforms
 
 from matplotlib.pyplot import imread
 import numpy as np
@@ -96,74 +98,55 @@ def cloud_transform(image, n_samples=1000):
     samples = samples[random.sample([i for i in range(len(samples))], n_samples)]
     return samples
 
-class DataLoaders(): #TODO: simplify
-    def __init__(self, dataset_name, batch_size_train, batch_size_test, **kwargs):
-        self.dataset_name = dataset_name
-        self.batch_size_train = batch_size_train
-        self.batch_size_test = batch_size_test
-        self.kwargs = kwargs
 
-    def load_data(self):
+def create_dataloader(dataset_name, batch_size, **kwargs):
 
-        if self.dataset_name == "gaussians":
-            n_train = self.kwargs["n_train"] if "n_train" in self.kwargs else 1000
-            n_test  = self.kwargs["n_test" ] if "n_test"  in self.kwargs else 1000
-            n_val   = self.kwargs["n_val"  ] if "n_val"   in self.kwargs else 1000
+    if dataset_name == "gaussians":
+        n_samples = kwargs["n_samples"] if "n_samples" in kwargs else 1000
 
-            means = (-2., 2.)
-            vars  = (1/4, 1/4)
-            train_x = sample_mixture_of_gaussians(means, vars, (n_train//2, n_train - n_train//2))
-            val_x   = sample_mixture_of_gaussians(means, vars, (n_val  //2, n_val   - n_val  //2))
-            test_x  = sample_mixture_of_gaussians(means, vars, (n_test //2, n_test  - n_test //2))
-
-            train_dataset = TensorDataset(train_x, torch.zeros(len(train_x)))
-            val_dataset   = TensorDataset(val_x  , torch.zeros(len(val_x  )))
-            test_dataset  = TensorDataset(test_x , torch.zeros(len(test_x )))
-
-            train_loader = DataLoader(train_dataset, batch_size = self.batch_size_train, shuffle=True)
-            val_loader   = DataLoader(val_dataset  , batch_size = self.batch_size_test , shuffle=True)
-            test_loader  = DataLoader(test_dataset , batch_size = self.batch_size_test , shuffle=True)
-        
-        elif self.dataset_name == "gaussians2D":
-            n_train = self.kwargs["n_train"] if "n_train" in self.kwargs else 1000
-            n_test  = self.kwargs["n_test" ] if "n_test"  in self.kwargs else 1000
-            n_val   = self.kwargs["n_val"  ] if "n_val"   in self.kwargs else 1000
-
-            means = ((-1, 0), (1, 0))
-            vars  = ((1/4, 1/16), (1/16, 1/4))
-            train_x = sample_mixture_of_gaussians(means, vars, (n_train//2, n_train - n_train//2))
-            val_x   = sample_mixture_of_gaussians(means, vars, (n_val  //2, n_val   - n_val  //2))
-            test_x  = sample_mixture_of_gaussians(means, vars, (n_test //2, n_test  - n_test //2))
-
-            train_dataset = TensorDataset(train_x, torch.zeros(len(train_x)))
-            val_dataset   = TensorDataset(val_x  , torch.zeros(len(val_x  )))
-            test_dataset  = TensorDataset(test_x , torch.zeros(len(test_x )))
-
-            train_loader = DataLoader(train_dataset, batch_size = self.batch_size_train, shuffle=True)
-            val_loader   = DataLoader(val_dataset  , batch_size = self.batch_size_test , shuffle=True)
-            test_loader  = DataLoader(test_dataset , batch_size = self.batch_size_test , shuffle=True)
-
-        elif self.dataset_name == "obelix" or self.dataset_name == "asterix":
-            n_train = self.kwargs["n_train"] if "n_train" in self.kwargs else 5000
-            n_test  = self.kwargs["n_test" ] if "n_test"  in self.kwargs else 5000
-            n_val   = self.kwargs["n_val"  ] if "n_val"   in self.kwargs else 5000
-
-            train_x = torch.tensor(cloud_transform(load_image(DATA_FOLDER / f"{self.dataset_name}.jpg"), n_samples=n_train)).float()
-            val_x   = torch.tensor(cloud_transform(load_image(DATA_FOLDER / f"{self.dataset_name}.jpg"), n_samples=n_val  )).float()
-            test_x  = torch.tensor(cloud_transform(load_image(DATA_FOLDER / f"{self.dataset_name}.jpg"), n_samples=n_test )).float()
-
-            train_dataset = TensorDataset(train_x, torch.zeros(len(train_x)))
-            val_dataset   = TensorDataset(val_x  , torch.zeros(len(val_x  )))
-            test_dataset  = TensorDataset(test_x , torch.zeros(len(test_x )))
-
-            train_loader = DataLoader(train_dataset, batch_size = self.batch_size_train, shuffle=True)
-            val_loader   = DataLoader(val_dataset  , batch_size = self.batch_size_test , shuffle=True)
-            test_loader  = DataLoader(test_dataset , batch_size = self.batch_size_test , shuffle=True)
-            
-        data_loaders = {'train': train_loader,
-                        'test': test_loader, 'val': val_loader}
-
-        return data_loaders
+        means = (-2., 2.)
+        vars  = (1/4, 1/4)
+        samples = sample_mixture_of_gaussians(means, vars, (n_samples//2, n_samples - n_samples//2))
+        dataset = TensorDataset(samples, torch.zeros(len(samples)))
+        loader = DataLoader(dataset, batch_size = batch_size, shuffle=True)
     
+    elif dataset_name == "gaussians2D":
+        n_samples = kwargs["n_samples"] if "n_samples" in kwargs else 1000
+
+        means = ((-1, 0), (1, 0))
+        vars  = ((1/4, 1/16), (1/16, 1/4))
+        samples = sample_mixture_of_gaussians(means, vars, (n_samples//2, n_samples - n_samples//2))
+        dataset = TensorDataset(samples, torch.zeros(len(samples)))
+        loader = DataLoader(dataset, batch_size = batch_size, shuffle=True)
+
+    elif dataset_name == "obelix" or dataset_name == "asterix":
+        n_samples = kwargs["n_samples"] if "n_samples" in kwargs else 5000
+
+        samples = torch.tensor(cloud_transform(load_image(DATA_FOLDER / f"{dataset_name}.jpg"), n_samples=n_samples)).float()
+        dataset = TensorDataset(samples, torch.zeros(len(samples)))
+        loader = DataLoader(dataset, batch_size = batch_size, shuffle=True)
+
+    if dataset_name == "mnist":
+        n_samples = kwargs["n_samples"] if "n_samples" in kwargs else 5000
+        shuffle   = kwargs["shuffle"]   if "shuffle"   in kwargs else True
+        
+        transform = transforms.Compose([
+            transforms.ToTensor(),  # Convert images to PyTorch tensors
+            transforms.Normalize((0.1307,), (0.3081,))  # Normalize with MNIST mean and std
+        ])
+
+        # Load the training dataset
+        mnist_dataset = Subset(torchvision.datasets.MNIST(
+            root='./data',       # Where to store the dataset
+            train=True,          # This is training data
+            download=True,       # Download if not present
+            transform=transform  # Apply transformations
+        ), range(n_samples))
+
+        # Create data loaders for batch processing
+        loader = DataLoader(mnist_dataset, batch_size=batch_size, shuffle=True)
+        
+    return loader
+
 
 
