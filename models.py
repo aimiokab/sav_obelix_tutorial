@@ -26,6 +26,10 @@ class ODEFunc(nn.Module):
     MLP with time dependancy (concatenated to the input).
     
     Probably not the most optimal one !!
+
+    Signature:
+        y (Tensor): shape (N, d)
+        t (Tensor): shape (N,)
     """
 
     # TODO : Possible improvements :
